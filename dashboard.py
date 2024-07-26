@@ -4,21 +4,20 @@ import matplotlib.pyplot as plt
 import plotly.graph_objects as go
 
 
-# Load your dataset
 data = pd.read_csv('cleaned_data_visit.csv', encoding='ISO-8859-1')
 
-# Ensure 'visit_created_on' is in datetime format
 data['visit_created_on'] = pd.to_datetime('1899-12-30') + pd.to_timedelta(data['visit_created_on'], 'D')
 
 # Sidebar filters
-logo_url = 'logo.png'  # Replace with the path to your logo image
+logo_url = 'logo.svg'  
 st.sidebar.image(logo_url, use_column_width=True)
 
 year = st.sidebar.selectbox("Year", options=["All"] + [2023, 2024])
 quarter = st.sidebar.selectbox("Quarter", options=["All", "Q1", "Q2", "Q3", "Q4"])
 month = st.sidebar.selectbox("Month", options=["All"] + [f"{pd.to_datetime(month, format='%m').strftime('%b')}" for month in range(1, 13)])
+visit_type = st.sidebar.selectbox("Visit Type", options=["All"] + data['visit_type'].unique().tolist())
 
-# Filter data based on sidebar inputs
+
 filtered_data = data.copy()
 if year != "All":
     filtered_data = filtered_data[filtered_data['visit_created_on'].dt.year == int(year)]
@@ -28,7 +27,9 @@ if quarter != "All":
 if month != "All":
     month_num = pd.to_datetime(month, format='%b').month
     filtered_data = filtered_data[filtered_data['visit_created_on'].dt.month == month_num]
-    
+if visit_type != "All":
+    filtered_data = filtered_data[filtered_data['visit_type'] == visit_type]
+
     
 
 # Calculate total visits, average day visits, and average night visits
@@ -37,23 +38,19 @@ average_day_visits = filtered_data[filtered_data['DayOrNight'] == 'Day'].shape[0
 average_night_visits = filtered_data[filtered_data['DayOrNight'] == 'Night'].shape[0] / 12  # Average per month
 average_visits = total_visits / filtered_data['visit_created_on'].dt.to_period('M').nunique()  # Average visits per month
 
-# Calculate the month with the highest visits
 filtered_data['visit_month'] = filtered_data['visit_created_on'].dt.to_period('M')
 visits_by_month = filtered_data['visit_month'].value_counts().sort_index()
 max_month = visits_by_month.idxmax()
 max_month_visits = visits_by_month.max()
 max_month_str = max_month.strftime('%b %Y')
 
-# Main title
 st.markdown("""
     <h1 style='text-align: center; color: white;'>SERVICE PROVIDER VISITS DASHBOARD</h1>
     """, unsafe_allow_html=True)
-# Get the start and end dates
 start_date = filtered_data['visit_created_on'].min().strftime('%Y-%m-%d')
 end_date = filtered_data['visit_created_on'].max().strftime('%Y-%m-%d')
 
-# Display start and end dates in two rows
-st.markdown("<br>", unsafe_allow_html=True)  # Add space between rows
+st.markdown("<br>", unsafe_allow_html=True)  
 
 # Row 0: Start and End Dates
 col1, col2 = st.columns([1, 1])
@@ -75,7 +72,6 @@ with col2:
 st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  # Adjust height as needed
 
 
-# Display total visit count, average day visits, average night visits, and average visits per month in a row
 col1, col2, col3, col4 = st.columns(4)
 
 with col1:
@@ -118,7 +114,6 @@ with col4:
         </div>
         """.format(average_visits), unsafe_allow_html=True)
 
-# Display the month with the highest visits
 st.markdown("""
     <div style="background-color: #008040; color: white; padding: 15px; text-align: center; border-radius: 5px; margin-top: 20px;">
         <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;">
@@ -132,13 +127,12 @@ st.markdown("""
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.markdown("<div style='height: 60px;'></div>", unsafe_allow_html=True)  # Add spacing from the top
+    st.markdown("<div style='height: 60px;'></div>", unsafe_allow_html=True)  
 
-    visits_by_month.index = visits_by_month.index.strftime('%b %Y')  # Format the index to show month names and year
+    visits_by_month.index = visits_by_month.index.strftime('%b %Y')  
 
-    fig, ax = plt.subplots(figsize=(10, 6))  # Set figure size to ensure consistent height
-    bars = ax.bar(visits_by_month.index, visits_by_month.values, color='#008040')  # Set bar color
-
+    fig, ax = plt.subplots(figsize=(10, 6))  
+    bars = ax.bar(visits_by_month.index, visits_by_month.values, color='#008040')  
     ax.set_xlabel("Date", color='white')
     ax.set_ylabel("Number of Visits", color='white')
     ax.set_title("Visits by Months of the Year", color='white')
@@ -151,13 +145,12 @@ with col1:
     st.pyplot(fig)
 
 with col2:
-    st.markdown("<div style='height: 90px;'></div>", unsafe_allow_html=True)  # Add spacing from the top
+    st.markdown("<div style='height: 90px;'></div>", unsafe_allow_html=True)  
 
-    # Calculate rate of change
-    monthly_change = visits_by_month.pct_change() * 100  # Percentage change
+    monthly_change = visits_by_month.pct_change() * 100  
 
     # Plot combined bar and line chart
-    fig, ax1 = plt.subplots(figsize=(10, 6))  # Set figure size to ensure consistent height
+    fig, ax1 = plt.subplots(figsize=(10, 6))  
 
     # Bar chart for visits
     color_bar = '#008040'
@@ -167,21 +160,18 @@ with col2:
     ax1.tick_params(axis='y', labelcolor=color_bar)
 
     # Line chart for rate of change
-    ax2 = ax1.twinx()  # instantiate a second axes that shares the same x-axis
+    ax2 = ax1.twinx()  
     color_line = '#FF4500'
-    ax2.set_ylabel('Rate of Change (%)', color=color_line)  # we already handled the x-label with ax1
+    ax2.set_ylabel('Rate of Change (%)', color=color_line)  
     line = ax2.plot(visits_by_month.index.astype(str), monthly_change, color=color_line, marker='o', linestyle='-', linewidth=2, label='Rate of Change')
     ax2.tick_params(axis='y', labelcolor=color_line)
 
-    # Optional: add gridlines and legend
     ax1.grid(True, linestyle='--', alpha=0.5)
     fig.tight_layout()  # adjust layout to fit both y-axes
     plt.title('Monthly Visits and Rate of Change', color='white')
 
-    # Format x-axis labels to avoid overlap
     fig.autofmt_xdate()
 
-    # Apply dark theme with custom colors
     fig.patch.set_facecolor('#0E1117')
     ax1.set_facecolor('#0E1117')
     ax2.set_facecolor('#0E1117')
@@ -201,8 +191,8 @@ fig_seasonal_visits = go.Figure(data=[go.Pie(
     labels=["Day", "Night"],
     values=[day_visits, night_visits],
     hole=0.3,
-    textinfo='none',  # No text on the pie chart
-    hoverinfo='label+percent',  # Show labels and percentages on hover
+    textinfo='none',  
+    hoverinfo='label+percent',  
     marker=dict(colors=['#008040', '#FF4500']),
 )])
 
@@ -221,7 +211,7 @@ fig_seasonal_visits.update_layout(
 
     )],
         height=270,
-        width=500  # Set a fixed height for the pie chart
+        width=500  
 
 )
 
@@ -255,16 +245,16 @@ with col4:
 col1, col2, col3, col4 = st.columns([1, 1, 2, 2])
 
 with col1:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  # Add spacing from the top
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
 
 with col2:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  # Add spacing from the top
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
 
 with col3:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  # Add spacing from the top
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
 
 with col4:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  # Add spacing from the top
+    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
 
 # Create the horizontal bar chart for Top 10 Attending Doctor Specializations
 top_specializations = filtered_data['attending_doctor_specialisation'].value_counts().head(10)
@@ -276,8 +266,8 @@ fig_specializations.add_trace(go.Bar(
     orientation='h',
     marker=dict(color='#008040'),
     text=top_specializations.values,
-    textposition='none',  # Hide text inside bars
-    hoverinfo='x+text'  # Show text on hover
+    textposition='none',  
+    hoverinfo='x+text'  
 ))
 
 fig_specializations.update_layout(
@@ -295,7 +285,6 @@ fig_specializations.update_layout(
 
 st.plotly_chart(fig_specializations, use_container_width=True)
     
-# Data
 # Data
 visits_by_type = filtered_data['visit_type'].value_counts()
 
@@ -340,11 +329,10 @@ fig.update_layout(
     paper_bgcolor='#0E1117',
     plot_bgcolor='#0E1117',
     font=dict(color='white'),
-    width=800,  # Increase width to make the chart bigger
-    height=600, # Increase height to make the chart bigger
+    width=800,  
+    height=600, 
 )
 
-# Create two columns for side-by-side layout
 col_chart, col_labels = st.columns([3, 1])
 
 with col_chart:
@@ -354,18 +342,6 @@ with col_chart:
 
 st.markdown("""
     <style>
-    .main {
-        background-color: #0E1117;
-        color: white;
-    }
-    .sidebar .sidebar-content {
-        background-color: #134018;
-        color: white;
-    }
-    .stButton>button {
-        background-color: #e66c37;
-        color: white;
-    }
     .chart-container {
         transition: transform 0.3s ease, box-shadow 0.3s ease;
     }
