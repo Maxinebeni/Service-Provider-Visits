@@ -8,7 +8,7 @@ data = pd.read_csv('cleaned_data_visit.csv', encoding='ISO-8859-1')
 
 data['visit_created_on'] = pd.to_datetime('1899-12-30') + pd.to_timedelta(data['visit_created_on'], 'D')
 
-# Sidebar filters
+# SIDEBAR FILTER
 logo_url = 'logo.svg'  
 st.sidebar.image(logo_url, use_column_width=True)
 
@@ -30,8 +30,23 @@ if month != "All":
 if visit_type != "All":
     filtered_data = filtered_data[filtered_data['visit_type'] == visit_type]
 
-    
 
+# Calculate day and night visits
+day_visits = filtered_data[filtered_data['DayOrNight'] == 'Day'].shape[0]
+night_visits = filtered_data[filtered_data['DayOrNight'] == 'Night'].shape[0]
+
+
+# Plot Seasonal Visits using Plotly for interactivity
+fig_seasonal_visits = go.Figure(data=[go.Pie(
+    labels=["Day", "Night"],
+    values=[day_visits, night_visits],
+    hole=0.3,
+    textinfo='none',  
+    hoverinfo='label+percent',  
+    marker=dict(colors=['#008040', '#FF4500']),
+)])
+    
+    
 # Calculate total visits, average day visits, and average night visits
 total_visits = filtered_data.shape[0]
 average_day_visits = filtered_data[filtered_data['DayOrNight'] == 'Day'].shape[0] / 12  # Average per month
@@ -88,21 +103,21 @@ with col2:
     st.markdown("""
         <div style="background-color: #FF4500; color: white; padding: 15px; text-align: center; border-radius: 5px;">
             <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;">
-                <h6 style="margin: 0;">Average Day Visits</h6>
-                <h2 style="margin: 0;">{:.2f}</h2>
+                <h6 style="margin: 0;">Total Visits by Day</h6>
+                <h2 style="margin: 0;">{}</h2>
             </div>
         </div>
-        """.format(average_day_visits), unsafe_allow_html=True)
+        """.format(day_visits), unsafe_allow_html=True)
 
 with col3:
     st.markdown("""
         <div style="background-color: #FF4500; color: white; padding: 15px; text-align: center; border-radius: 5px;">
             <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;">
-                <h6 style="margin: 0;">Average Night Visits</h6>
-                <h2 style="margin: 0;">{:.2f}</h2>
+                <h6 style="margin: 0;">Total Visits by Night</h6>
+                <h2 style="margin: 0;">{}</h2>
             </div>
         </div>
-        """.format(average_night_visits), unsafe_allow_html=True)
+        """.format(night_visits), unsafe_allow_html=True)
 
 with col4:
     st.markdown("""
@@ -123,28 +138,10 @@ st.markdown("""
     </div>
     """.format(max_month_str=max_month_str, max_month_visits=max_month_visits), unsafe_allow_html=True)
 
-# Row 3: Graphs Side by Side with Equal Height and Spacing
+# Row 3: Rate Change Graph
 col1, col2 = st.columns([1, 1])
 
 with col1:
-    st.markdown("<div style='height: 60px;'></div>", unsafe_allow_html=True)  
-
-    visits_by_month.index = visits_by_month.index.strftime('%b %Y')  
-
-    fig, ax = plt.subplots(figsize=(10, 6))  
-    bars = ax.bar(visits_by_month.index, visits_by_month.values, color='#008040')  
-    ax.set_xlabel("Date", color='white')
-    ax.set_ylabel("Number of Visits", color='white')
-    ax.set_title("Visits by Months of the Year", color='white')
-    ax.tick_params(axis='x', rotation=45, colors='white')
-    ax.tick_params(axis='y', colors='white')
-
-    fig.patch.set_facecolor('#0E1117')
-    ax.set_facecolor('#0E1117')
-
-    st.pyplot(fig)
-
-with col2:
     st.markdown("<div style='height: 90px;'></div>", unsafe_allow_html=True)  
 
     monthly_change = visits_by_month.pct_change() * 100  
@@ -178,85 +175,43 @@ with col2:
     ax1.tick_params(axis='x', rotation=45, colors='white')
     ax2.tick_params(axis='x', colors='white')
 
-    # Display plot
     st.pyplot(fig)
-    
-    
-# Calculate day and night visits
-day_visits = filtered_data[filtered_data['DayOrNight'] == 'Day'].shape[0]
-night_visits = filtered_data[filtered_data['DayOrNight'] == 'Night'].shape[0]
 
-# Plot Seasonal Visits using Plotly for interactivity
-fig_seasonal_visits = go.Figure(data=[go.Pie(
-    labels=["Day", "Night"],
-    values=[day_visits, night_visits],
+    
+with col2:
+    st.plotly_chart(fig_seasonal_visits, use_container_width=True)
+    
+
+
+# Visit Type Data
+   
+    
+# Create pie chart for visit types
+visits_by_type = filtered_data['visit_type'].value_counts()
+labels = visits_by_type.index.tolist()
+values = visits_by_type.values.tolist()
+colors = ['#008040', '#FF4500', '#00BFFF', '#FFD700', '#FF6347']  # Example color palette
+
+fig = go.Figure(data=[go.Pie(
+    labels=labels,
+    values=values,
     hole=0.3,
-    textinfo='none',  
-    hoverinfo='label+percent',  
-    marker=dict(colors=['#008040', '#FF4500']),
+    marker=dict(colors=colors[:len(labels)]),  # Ensure colors match number of labels
+    textinfo='label+percent',  # Show label and percentage
+    hoverinfo='label+percent'
 )])
 
-fig_seasonal_visits.update_layout(
-    title_text="Seasonal Visits",
-    title_font_color="white",
+fig.update_layout(
+    title="Visits by Visit Type",
+    title_font_color='white',
     paper_bgcolor='#0E1117',
     plot_bgcolor='#0E1117',
-    font_color="white",
-    annotations=[dict(
-        text="Visits",
-        x=0.5,
-        y=0.5,
-        font_size=20,
-        showarrow=False,
-
-    )],
-        height=270,
-        width=500  
-
+    font=dict(color='white'),
+    width=800,  
+    height=600
 )
 
-# Row 4: Graphs
-col1, col2, col3, col4 = st.columns(4)
-
-with col1:
-    st.plotly_chart(fig_seasonal_visits, use_container_width=True)
-
-with col3:
-    st.markdown("""
-        <div style="background-color: #FF4500; color: white; padding: 15px; text-align: center; border-radius: 5px;">
-            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;">
-                <h6 style="margin: 0;">Total Visits by Day</h6>
-                <h2 style="margin: 0;">{}</h2>
-            </div>
-        </div>
-        """.format(day_visits), unsafe_allow_html=True)
-
-with col4:
-    st.markdown("""
-        <div style="background-color: #FF4500; color: white; padding: 15px; text-align: center; border-radius: 5px;">
-            <div style="display: flex; flex-direction: column; justify-content: center; align-items: center; padding: 10px; box-sizing: border-box;">
-                <h6 style="margin: 0;">Total Visits by Night</h6>
-                <h2 style="margin: 0;">{}</h2>
-            </div>
-        </div>
-        """.format(night_visits), unsafe_allow_html=True)
-    
-# Row 5: Top 10 Attending Doctor Specializations Chart
-col1, col2, col3, col4 = st.columns([1, 1, 2, 2])
-
-with col1:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
-
-with col2:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
-
-with col3:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
-
-with col4:
-    st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)  
-
-# Create the horizontal bar chart for Top 10 Attending Doctor Specializations
+# Top 10 Attending Doctor Specializations
 top_specializations = filtered_data['attending_doctor_specialisation'].value_counts().head(10)
 fig_specializations = go.Figure()
 
@@ -267,7 +222,7 @@ fig_specializations.add_trace(go.Bar(
     marker=dict(color='#008040'),
     text=top_specializations.values,
     textposition='none',  
-    hoverinfo='x+text'  
+    hoverinfo='x+text'
 ))
 
 fig_specializations.update_layout(
@@ -282,64 +237,51 @@ fig_specializations.update_layout(
     margin=dict(l=0, r=0, t=30, b=50)
 )
 
-
-st.plotly_chart(fig_specializations, use_container_width=True)
-    
-# Data
-visits_by_type = filtered_data['visit_type'].value_counts()
-
-# Create dropdown for visit types
-visit_type_options = ['All'] + visits_by_type.index.tolist()
-
-# Row 5: Dropdown and Pie Chart
-st.markdown("<br>", unsafe_allow_html=True)  # Add space between rows
-col1, col2, col3, col4 = st.columns(4)
+# Displaying charts side by side
+col1, col2 = st.columns([1, 1])
 
 with col1:
-    selected_visit_type = st.selectbox('Select Visit Type', visit_type_options, key='visit_type_dropdown')
-
-# Filter data based on selected visit type
-if selected_visit_type != 'All':
-    filtered_visits = visits_by_type.copy()
-    for visit_type in visits_by_type.index:
-        if visit_type != selected_visit_type:
-            filtered_visits[visit_type] = 0
-
-    labels = filtered_visits.index
-    values = filtered_visits.values
-    colors = ['#d3d3d3' if visit_type != selected_visit_type else color for visit_type, color in zip(visits_by_type.index, ['#008040', '#FF4500', '#a2d9ff', '#f5b7b1'])]
-else:
-    labels = visits_by_type.index
-    values = visits_by_type.values
-    colors = ['#008040', '#FF4500', '#a2d9ff', '#f5b7b1']
-
-# Plotly Pie Chart
-fig = go.Figure(data=[go.Pie(
-    labels=labels,
-    values=values,
-    hole=0.3,
-    marker=dict(colors=colors),
-    textinfo='none',
-    hoverinfo='label+percent'
-)])
-
-fig.update_layout(
-    title="Visits by Visit Type",
-    title_font_color='white',
-    paper_bgcolor='#0E1117',
-    plot_bgcolor='#0E1117',
-    font=dict(color='white'),
-    width=800,  
-    height=600, 
-)
-
-col_chart, col_labels = st.columns([3, 1])
-
-with col_chart:
     st.plotly_chart(fig, use_container_width=True)
 
+with col2:
+    st.plotly_chart(fig_specializations, use_container_width=True)
+ 
+ 
+# AREA CHART
+monthly_visits = data.groupby(data['visit_created_on'].dt.to_period('M')).size()
+monthly_visits.index = monthly_visits.index.to_timestamp()
 
+# Create area chart for visits per month
+fig_area = go.Figure()
 
+fig_area.add_trace(go.Scatter(
+    x=monthly_visits.index,
+    y=monthly_visits.values,
+    fill='tozeroy',
+    mode='lines+markers',
+    marker=dict(color='#FF4500'),
+    line=dict(color='#FF4500'),
+    name='Number of Visits'
+))
+
+fig_area.update_layout(
+    title="Number of Visits Each Month",
+    xaxis_title="Month",
+    yaxis_title="Number of Visits",
+    plot_bgcolor='#0E1117',
+    paper_bgcolor='#0E1117',
+    font=dict(color='white'),
+    width=1200,  # Adjust width as needed
+    height=600   # Adjust height as needed
+)
+
+st.markdown("<div style='height: 20px;'></div>", unsafe_allow_html=True)
+
+# Use a single column that spans the full width for the chart
+st.plotly_chart(fig_area, use_container_width=True)
+
+    
+# Data
 st.markdown("""
     <style>
     .chart-container {
